@@ -119,6 +119,23 @@ class Convolution(Layer):
 
 		return input_grad
 
+## Testing GIN layer ########
+
+class GIN(Layer):
+	def __init__(self):
+
+		pass
+
+
+
+
+
+
+
+
+
+##########
+
 
 class Sigmoid(Activation):
 	def __init__(self):
@@ -135,7 +152,7 @@ class Sigmoid(Activation):
 class ReLU(Activation):
 	def __init__(self):
 		def relu(x):
-			return max(0,x)
+			return np.maximum(0,x)
 
 		def relu_prime(x):
 			return np.where(x > 0, 1, 0)
