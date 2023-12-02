@@ -145,6 +145,20 @@ class GIN(Layer):
 
 ##########
 
+# Reshape Layer
+class Reshape(Layer):
+
+	def __init__(self, input_shape, output_shape):
+		self.input_shape = input_shape
+		self.output_shape = output_shape
+
+	def forward(self, input):
+		return np.reshape(input, self.output_shape)
+
+	def backward(self, output_grad, learning_rate):
+		return np.reshape(output_grad, self.input_shape)
+
+
 
 class Sigmoid(Activation):
 	def __init__(self):
