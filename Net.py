@@ -95,8 +95,8 @@ class Convolution(Layer):
 		self.output = np.copy(self.biases)
 		for i in range(self.depth):
 			for j in range(self.input_depth):
-				# here we are using cross correlation of 2D inputs
-				self.output[i] += signal.correlate2d(self.input[j],
+				# here we are using cross correlation of 1D inputs
+				self.output[i] += signal.correlate1d(self.input[j],
 					self.kernels[i,j], "valid")
 
 		return self.output 
@@ -109,9 +109,9 @@ class Convolution(Layer):
 		# Bias grad is just output grad
 		for i in range(self.depth):
 			for j in range(self.input_depth):
-				kernels_grad[i,j] = signal.correlate2d(self.input[j],
+				kernels_grad[i,j] = signal.correlate1d(self.input[j],
 					output_grad[i], "valid")
-				input_grad[j] += signal.convolve2d(output_grad[i],
+				input_grad[j] += signal.convolve1d(output_grad[i],
 					self.kernels[i,j], "full")
 
 		self.kernels -= learning_rate * kernels_grad
@@ -123,6 +123,15 @@ class Convolution(Layer):
 
 class GIN(Layer):
 	def __init__(self):
+
+		pass
+
+	def forward(self):
+
+		pass
+
+
+	def backward(self):
 
 		pass
 
@@ -182,16 +191,15 @@ def train(network, loss, loss_prime, x_train, y_train,
 			# Do forward
 			output = predict(network, x)
         	
-        	# error (Useless, just to have an idea
-        	# of it on screen)
+        	# loss 
 			err += loss(y, output)
 
         	# Do backward
 			grad = loss_prime(y, output)
 			for layer in reversed(network):
 				grad = layer.backward(grad, learning_rate)
-        #Average error
+        #Average loss
 		err /= len(x_train)
 
 		if verbose:
-			print(f"{e + 1}/{epochs}, error = {err}")
+			print(f"{e + 1}/{epochs}, Loss = {err}")
