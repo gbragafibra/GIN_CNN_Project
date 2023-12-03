@@ -122,25 +122,49 @@ class Convolution(Layer):
 ## Testing GIN layer ########
 
 class GIN(Layer):
+	def __init__(self, input_size):
+		self.W = np.random.randn(input_size, input_size)
+
+	def forward(self, H, A):
+		self.H = H
+		self.A = A
+		
+		H_output = np.dot(np.dot(self.A, self.H).T, self.W)
+		A_output = self.A * (H_output + H_output.T)		
+
+		return H_output, A_output
+
+
+	def backward(self, output_grad, learning_rate):
+		grad_H = np.dot((np.dot(output_grad, self.W.T)).T,
+			self.A + self.A.T)
+
+		self.W -= learning_rate * np.dot(self.H.T, output_grad)
+
+		return grad_H
+
+
+
+
+
+
+class GlobalMeanPooling(Layer):
+
 	def __init__(self):
 
 		pass
 
-	def forward(self):
+	def forward(self, H):
+		self.H_shape = H.shape
 
-		pass
+		return np.mean(H, axis = 1)
 
+	def backward(self, output_grad):
+		grad_H = np.tile(output_grad[:, np.newaxis],
+			(1, self.H_shape[1])) / self.H_shape[1]
 
-	def backward(self):
-
-		pass
-
-
-
-
-
-
-
+		return grad_H
+		
 
 
 ##########
