@@ -145,6 +145,53 @@ class GIN(Layer):
 
 ##########
 
+# 1D Mean pooling layer
+# Will probably need this
+# to have fixed size inputs
+# Both regarding node features
+# vectors as edge features ones
+
+#Perhaps need to change this
+# into also taking the adjacency
+# matrix. Such that we'll have mean
+# pooling of H and Ã
+
+# Afterall, this would be performing
+# mean pooling both for A and H
+# A being 2D case, and H 1D case
+class Mean_pooling(Layer):
+
+	def __init__(self, size):
+		self.size = size
+
+	def forward(self, H, A):
+		pool_size = len(H) // self.size
+		pooled_H = [np.mean(H[i * pool_size: (i+1) * pool_size])
+		for i in range(self.size)]
+		
+		#Initialize
+		pooled_A = np.zeros((self.size, self.size))		
+		
+		for i in range(self.size):
+			for j in range(self.size):
+				sub_A = A[i * pool_size: (i+1) * pool_size,
+				j * pool_size: (j+1) * pool_size]
+
+				pooled_A[i,j] = np.mean(sub_A)
+
+			return pooled_H, pooled_A
+	
+	def backward(self):
+		"""
+		Given that this is to be applied as a
+		first layer, and there are no learnable
+		parameters, we can leave this empty (?)
+		"""
+		pass
+
+
+
+
 # Reshape Layer
 class Reshape(Layer):
 
