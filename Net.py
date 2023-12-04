@@ -1,6 +1,10 @@
 import numpy as np 
 import random
 from scipy import signal
+from sklearn.model_selection import train_test_split
+from rdkit import Chem
+import pandas as pd
+from preprocess_dataset import *
 
 # General layer class
 class Layer:
@@ -189,7 +193,9 @@ class Mean_pooling(Layer):
 		self.size = size
 	
 
-	def forward(self, H, A):
+	def forward(self, features):
+		H, A = features
+		
 		pool_size = len(H) // self.size
 		remainder = len(H) % self.size
 		#List of strides
@@ -326,32 +332,53 @@ def predict(network, input):
 
 	return output
 
-def train(network, loss, loss_prime, x_train, y_train,
-	epochs = 10, learning_rate = 0.1, 
-	batch_size = 10, verbose = True):
+def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
+       learning_rate = 0.1, batch_size = 10, verbose = True):
 
-	for e in range(epochs):
-		loss = 0
-		for i in range(0, len(x_train), batch_size):
-			x_batch = x_train[i: i + batch_size]
-			y_batch = y_train[i: i + batch_size]
-			batch_loss = 0
-			for x,y in zip(x_train,y_train):
-				# Do forward
-				output = predict(network, x)
-	        	
-	        	
-				batch_loss += loss(y, output)/len(x_batch)
+    data_processed = preprocess_dataset(dataset, task) 
+    
+    features = [(entry["features"]["H"], entry["features"]["A"]) for entry in data_processed]
+    labels = [entry["label"] for entry in data_processed]
 
-	        	# Do backward for the respective batch
-				
-				batch_grad = loss_prime(y_batch, output) / len(x_batch)
-				for layer in reversed(network):
-					batch_grad = layer.backward(batch_grad, learning_rate)
-			loss += batch_loss
-        
-        #Average loss
-		loss /= len(x_train)
+    train_features, test_features, train_labels, test_labels = train_test_split(features, labels, test_size=0.2)
+    test_features, eval_features, test_labels, eval_labels = train_test_split(test_features, test_labels, test_size=0.5)
 
-		if verbose:
-			print(f"{e + 1}/{epochs}, Loss = {loss}")
+
+    for e in range(epochs):
+        train_loss = 0
+        for i in range(0, len(train_features), batch_size):
+            x_batch = train_features[i: i + batch_size]
+            y_batch = train_labels[i: i + batch_size]
+
+            batch_loss = 0
+            for x, y in zip(x_batch, y_batch):
+                # Do forward pass
+                output = predict(network, x)
+                batch_loss += loss(y, output) / len(x_batch)
+
+                # Do backward pass
+                batch_grad = loss_prime(y, output) / len(x_batch)
+                for layer in reversed(network):
+                    batch_grad = layer.backward(batch_grad, learning_rate)
+            
+            train_loss += batch_loss
+
+        train_loss /= len(train_features)
+
+        if verbose:
+            print(f"Epoch {e + 1}/{epochs}, Training Loss = {train_loss}")
+
+
+    test_loss = 0
+    for x, y in zip(test_features, test_labels):
+        output = predict(network, x)
+        test_loss += loss(y, output)
+    test_loss /= len(test_features)
+    print(f"Test Loss: {test_loss}")
+
+    eval_loss = 0
+    for x, y in zip(eval_features, eval_labels):
+        output = predict(network, x)
+        eval_loss += loss(y, output)
+    eval_loss /= len(eval_features)
+    print(f"Evaluation Loss: {eval_loss}")
