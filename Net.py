@@ -187,10 +187,15 @@ class Mean_pooling(Layer):
 
 	def __init__(self, size):
 		self.size = size
+	
 
 	def forward(self, H, A):
 		pool_size = len(H) // self.size
-		pooled_H = [np.mean(H[i * pool_size: (i+1) * pool_size])
+		remainder = len(H) % self.size
+		#List of strides
+		strides = [pool_size + 1 if i < remainder else pool_size for i in range(self.size)]
+		
+		pooled_H = [np.mean(H[i * strides[i]: (i + 1) * strides[i]])
 		for i in range(self.size)]
 		
 		#Initialize
@@ -198,12 +203,12 @@ class Mean_pooling(Layer):
 		
 		for i in range(self.size):
 			for j in range(self.size):
-				sub_A = A[i * pool_size: (i+1) * pool_size,
-				j * pool_size: (j+1) * pool_size]
+				sub_A = A[i * strides[i]: (i + 1) * strides[i],
+				j * strides[j]: (j + 1) * strides[j]]
 
 				pooled_A[i,j] = np.mean(sub_A)
 
-			return pooled_H, pooled_A
+		return pooled_H, pooled_A
 	
 	def backward(self):
 		"""
