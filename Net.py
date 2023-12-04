@@ -158,7 +158,10 @@ class GlobalMeanPooling(Layer):
 
 		pass
 
-	def forward(self, H):
+	def forward(self, H, A):
+		# Takes A, but doesn't use it
+		# Given that the last GIN layer
+		# has forward outputs of H and A
 		self.H_shape = H.shape
 
 		return np.mean(H, axis = 1)
