@@ -219,7 +219,64 @@ class Mean_pooling(Layer):
 		pass
 
 
+# Batch Normalization Layer
+class BatchNorm(Layer):
+	def __init__(self, eps = 1e-5, momentum = 0.8, batch_size = 10):
+		self.eps = eps 
+		self.momentum = momentum
+		self.running_mean = None
+		self.running_var = None
+		self.mean = None
+		self.var = None
+		self.gamma = None
+		self.H_normalized = None
+		self.batch_size = batch_size
 
+	def forward(self, H, Training = True):
+		if self.running_mean is None:
+			# Only for the first forward pass
+			self.running_mean = np.mean(H)
+			self.running_var = np.var(H)
+			self.gamma = 1.0
+			self.beta = 0.1
+
+		if Training:
+			# All for the current batch
+			self.mean = np.mean(H)
+			self.var = np.var(H)
+			self.H_normalized = (H - self.mean) / np.sqrt(self.var + self.eps)
+
+			H_out = self.gamma * self.H_normalized + self.beta
+
+			#Updating running stats
+			self.running_mean = self.momentum * self.running_mean +
+			(1 - self.momentum) * self.mean 
+			self.running_var = self.momentum * self.running_var + 
+			(1 - self.momentum) * self.var
+		
+		#For testing and evaluation
+		else:
+			self.H_normalized = (H - self.running_mean) / np.sqrt(self.running_var + self.eps)
+			H_out = self.gamma * self.H_normalized + self.beta
+
+		return H_out		
+	
+	def backward(self, output_grad, learning_rate):
+		grad_gamma = np.sum(output_grad * self.H_normalized)
+		grad_beta = np.sum(output_grad)
+
+		grad_H_normalized = output_grad * self.gamma 
+
+		grad_H = (1 / (self.batch_size * np.sqrt(self.var + self.eps)))*
+			(self.batch_size * grad_H_normalized - 
+				np.sum(grad_H_normalized, axis = 0) -
+				self.H_normalized * np.sum(grad_H_normalized * self.H_normalized, axis = 0))
+
+
+		self.gamma -= (learning_rate/self.batch_size) * grad_gamma
+		self.beta -= (learning_rate/self.batch_size) * grad_beta
+
+		return grad_H 
 
 # Reshape Layer
 class Reshape(Layer):
@@ -273,23 +330,31 @@ def predict(network, input):
 	return output
 
 def train(network, loss, loss_prime, x_train, y_train,
-	epochs = 10, learning_rate = 0.1, verbose = True):
+	epochs = 10, learning_rate = 0.1, 
+	batch_size = 10, verbose = True):
 
 	for e in range(epochs):
-		err = 0
-		for x,y in zip(x_train,y_train):
-			# Do forward
-			output = predict(network, x)
-        	
-        	# loss 
-			err += loss(y, output)
+		loss = 0
+		for i in range(0, len(x_train), batch_size):
+			x_batch = x_train[i: i + batch_size]
+			y_batch = y_train[i: i + batch_size]
+			batch_loss = 0
+			for x,y in zip(x_train,y_train):
+				# Do forward
+				output = predict(network, x)
+	        	
+	        	
+				batch_loss += loss(y, output)/len(x_batch)
 
-        	# Do backward
-			grad = loss_prime(y, output)
-			for layer in reversed(network):
-				grad = layer.backward(grad, learning_rate)
+	        	# Do backward for the respective batch
+				
+				batch_grad = loss_prime(y_batch, output) / len(x_batch)
+				for layer in reversed(network):
+					batch_grad = layer.backward(batch_grad, learning_rate)
+        	loss += batch_loss
+        
         #Average loss
-		err /= len(x_train)
+		loss /= len(x_train)
 
 		if verbose:
-			print(f"{e + 1}/{epochs}, Loss = {err}")
+			print(f"{e + 1}/{epochs}, Loss = {loss}")
