@@ -249,10 +249,8 @@ class BatchNorm(Layer):
 			H_out = self.gamma * self.H_normalized + self.beta
 
 			#Updating running stats
-			self.running_mean = self.momentum * self.running_mean +
-			(1 - self.momentum) * self.mean 
-			self.running_var = self.momentum * self.running_var + 
-			(1 - self.momentum) * self.var
+			self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * self.mean 
+			self.running_var = self.momentum * self.running_var + (1 - self.momentum) * self.var
 		
 		#For testing and evaluation
 		else:
@@ -267,8 +265,7 @@ class BatchNorm(Layer):
 
 		grad_H_normalized = output_grad * self.gamma 
 
-		grad_H = (1 / (self.batch_size * np.sqrt(self.var + self.eps)))*
-			(self.batch_size * grad_H_normalized - 
+		grad_H = (1 / (self.batch_size * np.sqrt(self.var + self.eps)))*(self.batch_size * grad_H_normalized - 
 				np.sum(grad_H_normalized, axis = 0) -
 				self.H_normalized * np.sum(grad_H_normalized * self.H_normalized, axis = 0))
 
@@ -351,7 +348,7 @@ def train(network, loss, loss_prime, x_train, y_train,
 				batch_grad = loss_prime(y_batch, output) / len(x_batch)
 				for layer in reversed(network):
 					batch_grad = layer.backward(batch_grad, learning_rate)
-        	loss += batch_loss
+			loss += batch_loss
         
         #Average loss
 		loss /= len(x_train)
