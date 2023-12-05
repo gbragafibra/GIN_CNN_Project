@@ -75,6 +75,7 @@ class Dense(Layer):
 
 
 # Convolutional layer 
+"""
 class Convolution(Layer):
 
 	def __init__(self, input_shape, kernel_size, depth):
@@ -100,7 +101,7 @@ class Convolution(Layer):
 		for i in range(self.depth):
 			for j in range(self.input_depth):
 				# here we are using cross correlation of 1D inputs
-				self.output[i] += signal.correlate1d(self.input[j],
+				self.output[i] += signal.correlate(self.input[j],
 					self.kernels[i,j], "valid")
 
 		return self.output 
@@ -113,15 +114,50 @@ class Convolution(Layer):
 		# Bias grad is just output grad
 		for i in range(self.depth):
 			for j in range(self.input_depth):
-				kernels_grad[i,j] = signal.correlate1d(self.input[j],
+				kernels_grad[i,j] = signal.correlate(self.input[j],
 					output_grad[i], "valid")
-				input_grad[j] += signal.convolve1d(output_grad[i],
+				input_grad[j] += signal.convolve(output_grad[i],
 					self.kernels[i,j], "full")
 
 		self.kernels -= learning_rate * kernels_grad
 		self.biases -= learning_rate * output_grad
 
 		return input_grad
+"""
+#2nd version; Focus on 1D inputs
+class Convolution(Layer):
+    def __init__(self, input_shape, kernel_size, depth):
+        input_depth, input_length = input_shape
+        self.depth = depth
+        self.input_shape = input_shape
+        self.input_depth = input_depth
+        self.output_length = input_length - kernel_size + 1
+        self.kernels_shape = (depth, input_depth, kernel_size)
+        self.kernels = np.random.randn(*self.kernels_shape)
+        self.biases = np.random.randn(depth, self.output_length)
+
+    def forward(self, input):
+        self.input = input
+        self.output = np.copy(self.biases)
+        for i in range(self.depth):
+            for j in range(self.input_depth):
+                self.output[i] += np.convolve(self.input[j], self.kernels[i, j], mode='valid')
+        return self.output
+
+    def backward(self, output_grad, learning_rate):
+        kernels_grad = np.zeros(self.kernels_shape)
+        input_grad = np.zeros(self.input_shape)
+
+        for i in range(self.depth):
+            for j in range(self.input_depth):
+                kernels_grad[i, j] = np.correlate(self.input[j], output_grad[i], mode='valid')
+                input_grad[j] += np.convolve(output_grad[i], np.flip(self.kernels[i, j]), mode='full')
+
+        self.kernels -= learning_rate * kernels_grad
+        self.biases -= learning_rate * output_grad
+
+        return input_grad
+
 
 ## Testing GIN layer ########
 
@@ -129,21 +165,21 @@ class GIN(Layer):
 	def __init__(self, input_size):
 		self.W = np.random.randn(input_size, input_size)
 
-	def forward(self, H, A):
-		self.H = H
-		self.A = A
+	def forward(self, HandA):
+		H, A = HandA
+
 		
-		H_output = np.dot(np.dot(self.A, self.H).T, self.W)
-		A_output = self.A * (H_output + H_output.T)		
+		H_output = np.dot(np.dot(A, H).T, self.W)
+		A_output = A * (H_output + H_output.T)		
 
 		return H_output, A_output
 
 
 	def backward(self, output_grad, learning_rate):
 		grad_H = np.dot((np.dot(output_grad, self.W.T)).T,
-			self.A + self.A.T)
+			A + A.T)
 
-		self.W -= learning_rate * np.dot(self.H.T, output_grad)
+		self.W -= learning_rate * np.dot(H.T, output_grad)
 
 		return grad_H
 
@@ -158,13 +194,14 @@ class GlobalMeanPooling(Layer):
 
 		pass
 
-	def forward(self, H, A):
+	def forward(self, HandA):
 		# Takes A, but doesn't use it
 		# Given that the last GIN layer
 		# has forward outputs of H and A
+		H, A = HandA
 		self.H_shape = H.shape
-
-		return np.mean(H, axis = 1)
+		#Testing here, mean over axis = 1
+		return H
 
 	def backward(self, output_grad):
 		grad_H = np.tile(output_grad[:, np.newaxis],
@@ -302,7 +339,11 @@ class Reshape(Layer):
 class Sigmoid(Activation):
 	def __init__(self):
 		def sigmoid(x):
-			return 1/(1 + np.exp(-x))
+			if isinstance(x, tuple): #For tuples
+				return tuple(1 / (1 + np.exp(-elem)) for elem in x)
+
+			else: # A single array
+				return 1/(1 + np.exp(-x))
 
 		def sigmoid_prime(x):
 			sig = sigmoid(x)
