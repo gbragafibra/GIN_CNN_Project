@@ -202,7 +202,8 @@ class GlobalMeanPooling(Layer):
 		H, A = HandA
 		self.H_shape = H.shape
 		#Testing here, mean over axis = 1
-		return np.mean(H, axis=1)
+		# np.mean(H, axis=1) doesn't work
+		return H
 
 	def backward(self, output_grad):
 		grad_H = np.tile(output_grad[:, np.newaxis],
@@ -395,6 +396,7 @@ def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
 
     for e in range(epochs):
         train_loss = 0
+        train_correct = 0
         for i in range(0, len(train_features), batch_size):
             x_batch = train_features[i: i + batch_size]
             y_batch = train_labels[i: i + batch_size]
@@ -405,6 +407,9 @@ def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
                 output = predict(network, x)
                 batch_loss += loss(y, output) / len(x_batch)
 
+                if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
+                	train_correct += 1
+
                 # Do backward pass
                 batch_grad = loss_prime(y, output) / len(x_batch)
                 for layer in reversed(network):
@@ -413,21 +418,30 @@ def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
             train_loss += batch_loss
 
         train_loss /= len(train_features)
+        train_accuracy = train_correct/len(train_features)
 
         if verbose:
-            print(f"Epoch {e + 1}/{epochs}, Training Loss = {train_loss}")
+            print(f"Epoch {e + 1}/{epochs}, Training Loss = {train_loss}, Training accuracy = {train_accuracy}")
 
 
     test_loss = 0
+    test_correct = 0
     for x, y in zip(test_features, test_labels):
         output = predict(network, x)
         test_loss += loss(y, output)
+        if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
+        	test_correct += 1
     test_loss /= len(test_features)
-    print(f"Test Loss: {test_loss}")
+    test_accuracy = test_correct/len(test_features)
+    print(f"Test Loss: {test_loss}, Test accuracy: {test_accuracy}")
 
     eval_loss = 0
+    eval_correct = 0
     for x, y in zip(eval_features, eval_labels):
         output = predict(network, x)
         eval_loss += loss(y, output)
+        if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
+        	eval_correct += 1   
     eval_loss /= len(eval_features)
-    print(f"Evaluation Loss: {eval_loss}")
+    eval_accuracy = eval_correct/len(eval_features)
+    print(f"Evaluation Loss: {eval_loss}, Evaluation accuracy: {eval_accuracy}")
