@@ -166,20 +166,21 @@ class GIN(Layer):
 		self.W = np.random.randn(input_size, input_size)
 
 	def forward(self, HandA):
-		H, A = HandA
-
+		self.H, self.A = HandA
+		self.H = np.array(self.H)
+		self.A = np.array(self.A)
 		
-		H_output = np.dot(np.dot(A, H).T, self.W)
-		A_output = A * (H_output + H_output.T)		
+		H_output = np.dot(np.dot(self.A, self.H).T, self.W)
+		A_output = self.A * (H_output + H_output.T)		
 
 		return H_output, A_output
 
 
 	def backward(self, output_grad, learning_rate):
-		grad_H = np.dot((np.dot(output_grad, self.W.T)).T,
-			A + A.T)
+		grad_H = np.dot((np.dot(output_grad, self.W.T)),
+			self.A + self.A.T)
 
-		self.W -= learning_rate * np.dot(H.T, output_grad)
+		self.W -= learning_rate * np.dot(self.H.reshape(-1, 1), output_grad)
 
 		return grad_H
 
@@ -256,7 +257,7 @@ class Mean_pooling(Layer):
 
 		return pooled_H, pooled_A
 	
-	def backward(self):
+	def backward(self, output_grad, learning_rate):
 		"""
 		Given that this is to be applied as a
 		first layer, and there are no learnable
