@@ -36,7 +36,6 @@ class Activation(Layer):
 		return self.activation(self.input)
 
 	def backward(self, output_grad, learning_rate):
-
 		return np.multiply(output_grad, self.activation_prime(self.input))
 
 
@@ -62,10 +61,10 @@ class Dense(Layer):
 	def forward(self, input):
 		self.input = input 
 
-		return np.dot(self.weights, self.input) + self.bias	
+		return np.dot(self.weights, self.input.T) + self.bias	
 
 	def backward(self, output_grad, learning_rate):
-		weights_grad = np.dot(output_grad, self.input.T)
+		weights_grad = np.dot(output_grad, self.input)
 		input_grad = np.dot(self.weights.T, output_grad)
 		# Now update weights and biases
 		self.weights -= learning_rate * weights_grad
@@ -154,6 +153,7 @@ class Convolution(Layer):
                 input_grad[j] += np.convolve(output_grad[i], np.flip(self.kernels[i, j]), mode='full')
 
         self.kernels -= learning_rate * kernels_grad
+        output_grad = np.sum(output_grad, axis=0, keepdims=True)
         self.biases -= learning_rate * output_grad
 
         return input_grad
@@ -201,7 +201,7 @@ class GlobalMeanPooling(Layer):
 		H, A = HandA
 		self.H_shape = H.shape
 		#Testing here, mean over axis = 1
-		return H
+		return np.mean(H, axis=1)
 
 	def backward(self, output_grad):
 		grad_H = np.tile(output_grad[:, np.newaxis],
@@ -347,7 +347,11 @@ class Sigmoid(Activation):
 
 		def sigmoid_prime(x):
 			sig = sigmoid(x)
-			return sig * (1 - sig)
+			if isinstance(x, tuple): #for tuples
+				return tuple(sigmoid(elem) * (1 - sigmoid(elem)) for elem in x)
+			
+			else:#for array
+				return sig * (1 - sig)
 
 		super().__init__(sigmoid, sigmoid_prime)
 
