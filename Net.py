@@ -59,47 +59,17 @@ class Dense(Layer):
 		
 
 	def forward(self, input):
-		self.input = input 
+		self.input = input.reshape(-1, 1)
 
-		return np.dot(self.weights, self.input.T) + self.bias	
+		return np.dot(self.weights, self.input) + self.bias	
 
 	def backward(self, output_grad, learning_rate):
-		weights_grad = np.dot(output_grad, self.input)
+		weights_grad = np.dot(output_grad, self.input.T)
 		input_grad = np.dot(self.weights.T, output_grad)
 		# Now update weights and biases
 		self.weights -= learning_rate * weights_grad
 		self.bias -= learning_rate * output_grad
-		print("test")
-		return np.dot(self.weights.T, output_grad)
 
-class Dense2(Layer):
-
-	def __init__(self, input_size, output_size):
-		"""
-		Initialize weights and biases
-		We are sampling from standard normal dist
-		Might possibly want to normalize 
-		by sqrt(n) so as to not have
-		slow learning of params
-		if using activation functions
-		with low derivatives for
-		"a" close to 1 or 0
-		"""
-		self.weights = np.random.randn(output_size, input_size)
-		self.bias = np.random.randn(output_size, 1)
-		
-
-	def forward(self, input):
-		self.input = input 
-
-		return np.dot(self.weights, self.input.T) + self.bias	
-
-	def backward(self, output_grad, learning_rate):
-		weights_grad = np.dot(output_grad, self.input)
-		input_grad = np.dot(self.weights.T, output_grad)
-		# Now update weights and biases
-		self.weights -= learning_rate * weights_grad
-		self.bias -= learning_rate * output_grad
 		return np.dot(self.weights.T, output_grad)
 
 
@@ -245,11 +215,12 @@ class Convolution(Layer):
         input_grad = np.zeros(self.input.shape)
 
         for i in range(self.output_length):
-            kernel_grad += output_grad[i] * self.input[i:i+self.kernel_size]
-            input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
+        	kernel_grad += output_grad[i] * self.input[i:i+self.kernel_size]
+        	input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
 
         self.kernel -= learning_rate * kernel_grad
         self.biases -= learning_rate * output_grad
+
         return input_grad
 
 
