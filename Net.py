@@ -69,7 +69,7 @@ class Dense(Layer):
 		# Now update weights and biases
 		self.weights -= learning_rate * weights_grad
 		self.bias -= learning_rate * output_grad
-
+		print("test")
 		return np.dot(self.weights.T, output_grad)
 
 
@@ -265,6 +265,45 @@ class Mean_pooling(Layer):
 		parameters, we can leave this empty (?)
 		"""
 		pass
+
+# Sum Pooling layer
+class Sum_pooling(Layer):
+
+	def __init__(self, size):
+		self.size = size
+	
+
+	def forward(self, features):
+		H, A = features
+		
+		pool_size = len(H) // self.size
+		remainder = len(H) % self.size
+		#List of strides
+		strides = [pool_size + 1 if i < remainder else pool_size for i in range(self.size)]
+		
+		pooled_H = [np.sum(H[i * strides[i]: (i + 1) * strides[i]])
+		for i in range(self.size)]
+		
+		#Initialize
+		pooled_A = np.zeros((self.size, self.size))		
+		
+		for i in range(self.size):
+			for j in range(self.size):
+				sub_A = A[i * strides[i]: (i + 1) * strides[i],
+				j * strides[j]: (j + 1) * strides[j]]
+
+				pooled_A[i,j] = np.sum(sub_A)
+
+		return pooled_H, pooled_A
+	
+	def backward(self, output_grad, learning_rate):
+		"""
+		Given that this is to be applied as a
+		first layer, and there are no learnable
+		parameters, we can leave this empty (?)
+		"""
+		pass
+
 
 
 # Batch Normalization Layer
