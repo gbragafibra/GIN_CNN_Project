@@ -72,6 +72,38 @@ class Dense(Layer):
 		print("test")
 		return np.dot(self.weights.T, output_grad)
 
+class Dense2(Layer):
+
+	def __init__(self, input_size, output_size):
+		"""
+		Initialize weights and biases
+		We are sampling from standard normal dist
+		Might possibly want to normalize 
+		by sqrt(n) so as to not have
+		slow learning of params
+		if using activation functions
+		with low derivatives for
+		"a" close to 1 or 0
+		"""
+		self.weights = np.random.randn(output_size, input_size)
+		self.bias = np.random.randn(output_size, 1)
+		
+
+	def forward(self, input):
+		self.input = input 
+
+		return np.dot(self.weights, self.input.T) + self.bias	
+
+	def backward(self, output_grad, learning_rate):
+		weights_grad = np.dot(output_grad, self.input)
+		input_grad = np.dot(self.weights.T, output_grad)
+		# Now update weights and biases
+		self.weights -= learning_rate * weights_grad
+		self.bias -= learning_rate * output_grad
+		return np.dot(self.weights.T, output_grad)
+
+
+
 
 # Convolutional layer 
 """
@@ -124,6 +156,7 @@ class Convolution(Layer):
 		return input_grad
 """
 #2nd version; Focus on 1D inputs
+"""
 class Convolution(Layer):
     def __init__(self, input_shape, kernel_size, depth):
         input_depth, input_length = input_shape
@@ -156,6 +189,67 @@ class Convolution(Layer):
         output_grad = np.sum(output_grad, axis=0, keepdims=True)
         self.biases -= learning_rate * output_grad
 
+        return input_grad
+"""
+#Third time is the charm
+"""
+class Convolution(Layer):
+    def __init__(self, input_length, kernel_size, depth):
+        self.depth = depth
+        self.input_length = input_length
+        self.output_length = input_length - kernel_size + 1
+        self.kernel_size = kernel_size
+        self.kernels_shape = (depth, kernel_size)
+        self.kernels = np.random.randn(*self.kernels_shape)
+        self.biases = np.random.randn(depth, self.output_length)
+
+    def forward(self, input):
+    	self.input = input
+    	self.output = np.copy(self.biases)
+    	for i in range(self.depth):
+    		for j in range(self.output_length):
+    			self.output[i, j] += np.sum(self.input[j:j+self.kernel_size] * self.kernels[i])
+    	return self.output
+
+    def backward(self, output_grad, learning_rate):
+        kernels_grad = np.zeros(self.kernels_shape)
+        input_grad = np.zeros(self.input_length)
+
+        for i in range(self.depth):
+            for j in range(self.output_length):
+                kernels_grad[i] += output_grad[i, j] * self.input[j:j+self.kernel_size]
+                input_grad[j:j+self.kernel_size] += output_grad[i, j] * self.kernels[i]
+
+        self.kernels -= learning_rate * kernels_grad
+        self.biases -= learning_rate * output_grad
+        return input_grad
+"""
+#Maybe fourth
+class Convolution(Layer):
+    def __init__(self, input_length, kernel_size):
+        self.input_length = input_length
+        self.output_length = input_length - kernel_size + 1
+        self.kernel_size = kernel_size
+        self.kernel = np.random.randn(kernel_size)
+        self.biases = np.random.randn(self.output_length)
+
+    def forward(self, input):
+        self.input = input
+        self.output = np.copy(self.biases)
+        for i in range(self.output_length):
+            self.output[i] += np.sum(self.input[i:i+self.kernel_size] * self.kernel)
+        return self.output
+
+    def backward(self, output_grad, learning_rate):
+        kernel_grad = np.zeros(self.kernel.shape)
+        input_grad = np.zeros(self.input.shape)
+
+        for i in range(self.output_length):
+            kernel_grad += output_grad[i] * self.input[i:i+self.kernel_size]
+            input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
+
+        self.kernel -= learning_rate * kernel_grad
+        self.biases -= learning_rate * output_grad
         return input_grad
 
 
@@ -201,9 +295,12 @@ class GlobalMeanPooling(Layer):
 		# has forward outputs of H and A
 		H, A = HandA
 		self.H_shape = H.shape
+		if len(H.shape) == 1:
+			H = H.reshape(-1, 1)
 		#Testing here, mean over axis = 1
 		# np.mean(H, axis=1) doesn't work
-		return H
+		pooled_H = np.mean(H, axis=1, keepdims=True)
+		return pooled_H.T
 
 	def backward(self, output_grad):
 		grad_H = np.tile(output_grad[:, np.newaxis],
