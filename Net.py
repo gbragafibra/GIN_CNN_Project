@@ -215,9 +215,15 @@ class Convolution(Layer):
         input_grad = np.zeros(self.input.shape)
 
         for i in range(self.output_length):
-        	kernel_grad += output_grad[i] * self.input[i:i+self.kernel_size]
-        	input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
-
+            for k in range(self.kernel_size):
+                kernel_grad[k] += np.sum(output_grad[i] * self.input[i + k])
+                input_grad[i:i+self.kernel_size] += np.sum(output_grad[i] * self.kernel[k])
+        #for i in range(self.output_length):
+        #	kernel_grad += output_grad[i] * self.input[i:i+self.kernel_size]
+        #	input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
+        if output_grad.ndim > 1:
+        	output_grad = np.mean(output_grad, axis=1)
+        print(output_grad)
         self.kernel -= learning_rate * kernel_grad
         self.biases -= learning_rate * output_grad
 
