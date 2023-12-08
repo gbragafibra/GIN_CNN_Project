@@ -58,7 +58,7 @@ class Dense(Layer):
 		with low derivatives for
 		"a" close to 1 or 0
 		"""
-		self.weights = np.random.randn(output_size, input_size)
+		self.weights = np.random.randn(output_size, input_size)/np.sqrt(input_size)
 		self.bias = np.random.randn(output_size, 1)
 		
 
@@ -204,7 +204,7 @@ class Convolution(Layer):
         self.input_length = input_length
         self.output_length = input_length - kernel_size + 1
         self.kernel_size = kernel_size
-        self.kernel = np.random.randn(kernel_size)
+        self.kernel = np.random.randn(kernel_size)/np.sqrt(input_length)
         self.biases = np.random.randn(self.output_length)
 
     def forward(self, input):
@@ -238,7 +238,7 @@ class Convolution(Layer):
 
 class GIN(Layer):
 	def __init__(self, input_size):
-		self.W = np.random.randn(input_size, input_size)
+		self.W = np.random.randn(input_size, input_size)/np.sqrt(input_size)
 
 	def forward(self, HandA):
 		self.H, self.A = HandA
