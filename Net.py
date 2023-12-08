@@ -36,7 +36,11 @@ class Activation(Layer):
 		return self.activation(self.input)
 
 	def backward(self, output_grad, learning_rate):
-		return np.multiply(output_grad, self.activation_prime(self.input))
+		#Need self.activation_prime(self.input)[0]
+		# as backprop in Sigmoid() in GIN layers
+		# have two inputs H and A (tuple)
+		# and we only want to consider H
+		return np.multiply(output_grad, self.activation_prime(self.input)[0])
 
 
 # Dense Layer (or Fully Connected Layer)
@@ -223,7 +227,7 @@ class Convolution(Layer):
         #	input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
         if output_grad.ndim > 1:
         	output_grad = np.mean(output_grad, axis=1)
-        print(output_grad)
+
         self.kernel -= learning_rate * kernel_grad
         self.biases -= learning_rate * output_grad
 
@@ -250,8 +254,12 @@ class GIN(Layer):
 	def backward(self, output_grad, learning_rate):
 		grad_H = np.dot((np.dot(output_grad, self.W.T)),
 			self.A + self.A.T)
+		if output_grad.ndim == 3:
+			output_grad_reshaped = output_grad.squeeze().T
+		else:
+			output_grad_reshaped = output_grad
 
-		self.W -= learning_rate * np.dot(self.H.reshape(-1, 1), output_grad)
+		self.W -= learning_rate * np.dot(self.H.T, output_grad_reshaped)
 
 		return grad_H
 
@@ -275,14 +283,13 @@ class GlobalMeanPooling(Layer):
 		if len(H.shape) == 1:
 			H = H.reshape(-1, 1)
 		#Testing here, mean over axis = 1
-		# np.mean(H, axis=1) doesn't work
 		pooled_H = np.mean(H, axis=1, keepdims=True)
 		return pooled_H.T
 
-	def backward(self, output_grad):
-		grad_H = np.tile(output_grad[:, np.newaxis],
-			(1, self.H_shape[1])) / self.H_shape[1]
+	def backward(self, output_grad, learning_rate):
 
+		grad_H = np.tile(output_grad[:, np.newaxis],
+			(1, self.H_shape[0])) / self.H_shape[0]
 		return grad_H
 		
 
