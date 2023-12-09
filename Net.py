@@ -525,7 +525,7 @@ def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
             for x, y in zip(x_batch, y_batch):
                 # Do forward pass
                 output = predict(network, x)
-                batch_loss += loss(y, output) / len(x_batch)
+                batch_loss += loss(y, output)
 
                 if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
                 	train_correct += 1
