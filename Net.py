@@ -522,6 +522,7 @@ def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
             y_batch = train_labels[i: i + batch_size]
 
             batch_loss = 0
+            batch_grad = 0 
             for x, y in zip(x_batch, y_batch):
                 # Do forward pass
                 output = predict(network, x)
@@ -530,11 +531,13 @@ def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
                 if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
                 	train_correct += 1
 
-                # Do backward pass
-                batch_grad = loss_prime(y, output) / len(x_batch)
-                for layer in reversed(network):
-                    batch_grad = layer.backward(batch_grad, learning_rate)
-            
+                
+                batch_grad += loss_prime(y, output)
+            # Do backward pass
+            batch_grad /= len(x_batch)
+            for layer in reversed(network):
+                batch_grad = layer.backward(batch_grad, learning_rate)
+        
             train_loss += batch_loss
 
         train_loss /= len(train_features)
