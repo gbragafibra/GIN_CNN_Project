@@ -500,6 +500,14 @@ def binary_cross_entropy_prime(y_true, y_pred):
 	return ((1 - y_true)/(1 - y_pred) - y_true/y_pred) / np.size(y_true)
 
 
+#Mean squared error
+def mse(y_true, y_pred):
+	return np.mean((y_true - y_pred)**2)
+
+def mse_prime(y_true, y_pred):
+	return 2 * (y_pred - y_true)/np.size(y_true)
+
+
 def predict(network, input):
 	output = input 
 	for layer in network:
