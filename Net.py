@@ -47,7 +47,7 @@ class Activation(Layer):
 
 class Dense(Layer):
 
-	def __init__(self, input_size, output_size):
+	def __init__(self, input_size, output_size, clip = 0.5):
 		"""
 		Initialize weights and biases
 		We are sampling from standard normal dist
@@ -60,7 +60,7 @@ class Dense(Layer):
 		"""
 		self.weights = np.random.randn(output_size, input_size)/np.sqrt(input_size)
 		self.bias = np.random.randn(output_size, 1)
-		
+		self.clip = clip
 
 	def forward(self, input):
 		self.input = input.reshape(-1, 1)
@@ -70,6 +70,13 @@ class Dense(Layer):
 	def backward(self, output_grad, learning_rate):
 		weights_grad = np.dot(output_grad, self.input.T)
 		input_grad = np.dot(self.weights.T, output_grad)
+		
+		
+		#Trying gradient clipping
+		weights_grad = np.clip(weights_grad, -self.clip, self.clip)
+		input_grad = np.clip(input_grad, -self.clip, self.clip)
+		
+
 		# Now update weights and biases
 		self.weights -= learning_rate * weights_grad
 		self.bias -= learning_rate * output_grad
@@ -200,12 +207,13 @@ class Convolution(Layer):
 """
 #Maybe fourth
 class Convolution(Layer):
-    def __init__(self, input_length, kernel_size):
+    def __init__(self, input_length, kernel_size, clip = 0.5):
         self.input_length = input_length
         self.output_length = input_length - kernel_size + 1
         self.kernel_size = kernel_size
         self.kernel = np.random.randn(kernel_size)/np.sqrt(input_length)
         self.biases = np.random.randn(self.output_length)
+        self.clip = clip
 
     def forward(self, input):
         self.input = input
@@ -228,6 +236,10 @@ class Convolution(Layer):
         if output_grad.ndim > 1:
         	output_grad = np.mean(output_grad, axis=1)
 
+        kernel_grad = np.clip(kernel_grad, -self.clip, self.clip)
+        output_grad = np.clip(output_grad, -self.clip, self.clip)
+        input_grad = np.clip(input_grad, -self.clip, self.clip)
+
         self.kernel -= learning_rate * kernel_grad
         self.biases -= learning_rate * output_grad
 
@@ -237,13 +249,15 @@ class Convolution(Layer):
 ## Testing GIN layer ########
 
 class GIN(Layer):
-	def __init__(self, input_size):
+	def __init__(self, input_size, clip = 1.0):
 		self.W = np.random.randn(input_size, input_size)/np.sqrt(input_size)
+		self.clip = clip
 
 	def forward(self, HandA):
 		self.H, self.A = HandA
 		self.H = np.array(self.H)
 		self.A = np.array(self.A)
+		
 		
 		H_output = np.dot(np.dot(self.A, self.H).T, self.W)
 		A_output = self.A * (H_output + H_output.T)		
@@ -259,6 +273,9 @@ class GIN(Layer):
 		else:
 			output_grad_reshaped = output_grad
 
+		output_grad_reshaped = np.clip(output_grad_reshaped, -self.clip, self.clip)
+		grad_H = np.clip(grad_H, -self.clip, self.clip)
+
 		self.W -= learning_rate * np.dot(self.H.T, output_grad_reshaped)
 
 		return grad_H
@@ -270,9 +287,9 @@ class GIN(Layer):
 
 class GlobalMeanPooling(Layer):
 
-	def __init__(self):
+	def __init__(self, clip = 0.5):
 
-		pass
+		self.clip = clip
 
 	def forward(self, HandA):
 		# Takes A, but doesn't use it
@@ -290,6 +307,8 @@ class GlobalMeanPooling(Layer):
 
 		grad_H = np.tile(output_grad[:, np.newaxis],
 			(1, self.H_shape[0])) / self.H_shape[0]
+		grad_H = np.clip(grad_H, -self.clip, self.clip)
+
 		return grad_H
 		
 
@@ -389,7 +408,7 @@ class Sum_pooling(Layer):
 
 # Batch Normalization Layer
 class BatchNorm(Layer):
-	def __init__(self, eps = 1e-5, momentum = 0.8, batch_size = 10):
+	def __init__(self, eps = 1e-5, momentum = 0.8, batch_size = 10, clip = 0.5):
 		self.eps = eps 
 		self.momentum = momentum
 		self.running_mean = None
@@ -399,14 +418,15 @@ class BatchNorm(Layer):
 		self.gamma = None
 		self.H_normalized = None
 		self.batch_size = batch_size
+		self.clip = clip
 
 	def forward(self, H, Training = True):
 		if self.running_mean is None:
 			# Only for the first forward pass
 			self.running_mean = np.mean(H)
 			self.running_var = np.var(H)
-			self.gamma = 1.0
-			self.beta = 0.1
+			self.gamma = 0.8
+			self.beta = 0.4
 
 		if Training:
 			# All for the current batch
@@ -437,6 +457,7 @@ class BatchNorm(Layer):
 				np.sum(grad_H_normalized, axis = 0) -
 				self.H_normalized * np.sum(grad_H_normalized * self.H_normalized, axis = 0))
 
+		grad_H = np.clip(grad_H, -self.clip, self.clip)
 
 		self.gamma -= (learning_rate/self.batch_size) * grad_gamma
 		self.beta -= (learning_rate/self.batch_size) * grad_beta
