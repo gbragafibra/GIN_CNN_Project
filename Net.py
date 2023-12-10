@@ -235,7 +235,6 @@ class Convolution(Layer):
         	output_grad = np.mean(output_grad, axis=1)
 
         kernel_grad = np.clip(kernel_grad, -self.clip, self.clip)
-        output_grad = np.clip(output_grad, -self.clip, self.clip)
         input_grad = np.clip(input_grad, -self.clip, self.clip)
 
         self.kernel -= learning_rate * kernel_grad
