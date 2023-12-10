@@ -518,7 +518,8 @@ def predict(network, input):
 
 	return output
 
-def SGD(network, loss, loss_prime, dataset, task, epochs = 10,
+#Mini-batch Gradient Descent
+def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
        learning_rate = 0.1, batch_size = 10, verbose = True):
 
     data_processed = preprocess_dataset(dataset, task) 
