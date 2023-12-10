@@ -229,10 +229,8 @@ class Convolution(Layer):
         for i in range(self.output_length):
             for k in range(self.kernel_size):
                 kernel_grad[k] += np.sum(output_grad[i] * self.input[i + k])
-                input_grad[i:i+self.kernel_size] += np.sum(output_grad[i] * self.kernel[k])
-        #for i in range(self.output_length):
-        #	kernel_grad += output_grad[i] * self.input[i:i+self.kernel_size]
-        #	input_grad[i:i+self.kernel_size] += output_grad[i] * self.kernel
+                input_grad[i + k] += np.sum(output_grad[i] * self.kernel[k])
+        
         if output_grad.ndim > 1:
         	output_grad = np.mean(output_grad, axis=1)
 
@@ -249,7 +247,7 @@ class Convolution(Layer):
 ## Testing GIN layer ########
 
 class GIN(Layer):
-	def __init__(self, input_size, clip = 1.0):
+	def __init__(self, input_size, clip = 0.5):
 		self.W = np.random.randn(input_size, input_size)/np.sqrt(input_size)
 		self.clip = clip
 
@@ -315,20 +313,6 @@ class GlobalMeanPooling(Layer):
 
 ##########
 
-# 1D Mean pooling layer
-# Will probably need this
-# to have fixed size inputs
-# Both regarding node features
-# vectors as edge features ones
-
-#Perhaps need to change this
-# into also taking the adjacency
-# matrix. Such that we'll have mean
-# pooling of H and Ã
-
-# Afterall, this would be performing
-# mean pooling both for A and H
-# A being 2D case, and H 1D case
 class Mean_pooling(Layer):
 
 	def __init__(self, size):
@@ -459,8 +443,8 @@ class BatchNorm(Layer):
 
 		grad_H = np.clip(grad_H, -self.clip, self.clip)
 
-		self.gamma -= (learning_rate/self.batch_size) * grad_gamma
-		self.beta -= (learning_rate/self.batch_size) * grad_beta
+		self.gamma -= learning_rate * grad_gamma
+		self.beta -= learning_rate * grad_beta
 
 		return grad_H 
 
