@@ -378,6 +378,10 @@ class Sum_pooling(Layer):
 
 				pooled_A[i,j] = np.sum(sub_A)
 
+		#Normalizing H and A
+		pooled_H = (pooled_H - np.min(pooled_H))/(np.max(pooled_H) - np.min(pooled_H))
+		pooled_A = (pooled_A - np.min(pooled_A))/(np.max(pooled_A) - np.min(pooled_A))
+
 		return pooled_H, pooled_A
 	
 	def backward(self, output_grad, learning_rate):
