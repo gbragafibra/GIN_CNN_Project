@@ -229,7 +229,13 @@ class Convolution(Layer):
         for i in range(self.output_length):
             for k in range(self.kernel_size):
                 kernel_grad[k] += np.sum(output_grad[i] * self.input[i + k])
-                input_grad[i + k] += np.sum(output_grad[i] * self.kernel[k])
+                """
+                Need to flip kernel, so as to match
+                a convolution op; Ideally it would
+                be by 180 deg, but since it's 1D,
+                we flip only horizontally
+                """
+                input_grad[i + k] += np.sum(output_grad[i] * np.flip(self.kernel[k]))
         
         if output_grad.ndim > 1:
         	output_grad = np.mean(output_grad, axis=1)
@@ -263,8 +269,9 @@ class GIN(Layer):
 
 
 	def backward(self, output_grad, learning_rate):
-		grad_H = np.dot((np.dot(output_grad, self.W.T)),
-			self.A + self.A.T)
+		#grad_H = np.dot((np.dot(output_grad, self.W.T)),
+		#	self.A + self.A.T)
+		grad_H = np.dot(output_grad, self.W.T)
 		if output_grad.ndim == 3:
 			output_grad_reshaped = output_grad.squeeze().T
 		else:
@@ -273,7 +280,7 @@ class GIN(Layer):
 		output_grad_reshaped = np.clip(output_grad_reshaped, -self.clip, self.clip)
 		grad_H = np.clip(grad_H, -self.clip, self.clip)
 
-		self.W -= learning_rate * np.dot(self.H.T, output_grad_reshaped)
+		self.W -= learning_rate * np.dot(output_grad_reshaped, self.H.T)
 
 		return grad_H
 
@@ -443,10 +450,10 @@ class BatchNorm(Layer):
 		grad_H_normalized = output_grad * self.gamma 
 
 
-		var_grad = np.sum(grad_H_normalized * (self.H - self.mean) * -0.5 * self.var ** (-3/2),
+		var_grad = np.sum(grad_H_normalized * (self.H - self.mean) * -0.5 * (self.var + self.eps)** (-3/2),
 			axis = 0, keepdims = True)
 		
-		std_inv = 1/np.sqrt(self.var)
+		std_inv = 1/np.sqrt(self.var + self.eps)
 		
 		H_diff = 2*(self.H-self.mean)/self.batch_size
 
