@@ -81,7 +81,7 @@ class Dense(Layer):
 		self.weights -= learning_rate * weights_grad
 		self.bias -= learning_rate * output_grad
 
-		return np.dot(self.weights.T, output_grad)
+		return input_grad
 
 
 
