@@ -410,6 +410,7 @@ class BatchNorm(Layer):
 	def forward(self, H, Training = True):
 		if self.running_mean is None:
 			# Only for the first forward pass
+			self.H = H
 			self.running_mean = np.mean(H)
 			self.running_var = np.var(H)
 			self.gamma = 0.8
@@ -417,6 +418,7 @@ class BatchNorm(Layer):
 
 		if Training:
 			# All for the current batch
+			self.H = H
 			self.mean = np.mean(H)
 			self.var = np.var(H)
 			self.H_normalized = (H - self.mean) / np.sqrt(self.var + self.eps)
@@ -440,11 +442,28 @@ class BatchNorm(Layer):
 
 		grad_H_normalized = output_grad * self.gamma 
 
+
+		var_grad = np.sum(grad_H_normalized * (self.H - self.mean) * -0.5 * self.var ** (-3/2),
+			axis = 0, keepdims = True)
+		
+		std_inv = 1/np.sqrt(self.var)
+		
+		H_diff = 2*(self.H-self.mean)/self.batch_size
+
+		mean_grad = np.sum(grad_H_normalized * (-std_inv), 
+			axis = 0, keepdims = True) + var_grad * np.sum(-H_diff,
+			axis = 0, keepdims = True)
+		
+		grad_H = grad_H_normalized * std_inv + var_grad * H_diff + mean_grad/self.batch_size
+
+		""" #Not sure if both are equivalent
 		grad_H = (1 / (self.batch_size * np.sqrt(self.var + self.eps)))*(self.batch_size * grad_H_normalized - 
 				np.sum(grad_H_normalized, axis = 0) -
 				self.H_normalized * np.sum(grad_H_normalized * self.H_normalized, axis = 0))
 
+		"""
 		grad_H = np.clip(grad_H, -self.clip, self.clip)
+		
 
 		self.gamma -= learning_rate * grad_gamma
 		self.beta -= learning_rate * grad_beta
@@ -527,7 +546,7 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
     features = [(entry["features"]["H"], entry["features"]["A"]) for entry in data_processed]
     labels = [entry["label"] for entry in data_processed]
 
-    train_features, test_features, train_labels, test_labels = train_test_split(features, labels, test_size=0.2)
+    train_features, test_features, train_labels, test_labels = train_test_split(features, labels, test_size=0.3)
     test_features, eval_features, test_labels, eval_labels = train_test_split(test_features, test_labels, test_size=0.5)
 
 
