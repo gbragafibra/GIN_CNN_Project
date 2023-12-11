@@ -271,7 +271,7 @@ class GIN(Layer):
 	def backward(self, output_grad, learning_rate):
 		#grad_H = np.dot((np.dot(output_grad, self.W.T)),
 		#	self.A + self.A.T)
-		grad_H = np.dot(output_grad, self.W.T)
+		grad_H = np.dot(output_grad, np.dot(self.W.T, self.A))
 		if output_grad.ndim == 3:
 			output_grad_reshaped = output_grad.squeeze().T
 		else:
