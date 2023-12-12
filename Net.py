@@ -535,11 +535,15 @@ def mse(y_true, y_pred):
 def mse_prime(y_true, y_pred):
 	return 2 * (y_pred - y_true)/np.size(y_true)
 
-
-def predict(network, input):
+# Changed to accomodate BatchNorm training boolean
+def predict(network, input, training = True):
 	output = input 
 	for layer in network:
-		output = layer.forward(output)
+		if isinstance(layer, BatchNorm):
+			output = layer.forward(output, Training = training)
+
+		else:
+			output = layer.forward(output)
 
 	return output
 
@@ -567,7 +571,7 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
             batch_grad = 0 
             for x, y in zip(x_batch, y_batch):
                 # Do forward pass
-                output = predict(network, x)
+                output = predict(network, x, training = True)
                 batch_loss += loss(y, output)
 
                 if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
@@ -592,7 +596,7 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
     test_loss = 0
     test_correct = 0
     for x, y in zip(test_features, test_labels):
-        output = predict(network, x)
+        output = predict(network, x, training = False)
         test_loss += loss(y, output)
         if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
         	test_correct += 1
@@ -603,7 +607,7 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
     eval_loss = 0
     eval_correct = 0
     for x, y in zip(eval_features, eval_labels):
-        output = predict(network, x)
+        output = predict(network, x, training = False)
         eval_loss += loss(y, output)
         if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
         	eval_correct += 1   
