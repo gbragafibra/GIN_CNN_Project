@@ -225,7 +225,6 @@ class Convolution(Layer):
     def backward(self, output_grad, learning_rate):
         kernel_grad = np.zeros(self.kernel.shape)
         input_grad = np.zeros(self.input.shape)
-
         for i in range(self.output_length):
             for k in range(self.kernel_size):
                 kernel_grad[k] += np.sum(output_grad[i] * self.input[i + k])
@@ -308,9 +307,9 @@ class GlobalMeanPooling(Layer):
 		return pooled_H.T
 
 	def backward(self, output_grad, learning_rate):
-
-		grad_H = np.tile(output_grad[:, np.newaxis],
-			(1, self.H_shape[0])) / self.H_shape[0]
+		#grad_H = np.tile(output_grad[:, np.newaxis],
+		#	(1, self.H_shape[0])) / self.H_shape[0]
+		grad_H = output_grad / self.H_shape[0]
 		grad_H = np.clip(grad_H, -self.clip, self.clip)
 
 		return grad_H
@@ -345,6 +344,7 @@ class Mean_pooling(Layer):
 				j * strides[j]: (j + 1) * strides[j]]
 
 				pooled_A[i,j] = np.mean(sub_A)
+
 
 		return pooled_H, pooled_A
 	
@@ -446,7 +446,6 @@ class BatchNorm(Layer):
 	def backward(self, output_grad, learning_rate):
 		grad_gamma = np.sum(output_grad * self.H_normalized)
 		grad_beta = np.sum(output_grad)
-
 		grad_H_normalized = output_grad * self.gamma 
 
 
