@@ -270,13 +270,13 @@ class GIN(Layer):
 	def backward(self, output_grad, learning_rate):
 		#grad_H = np.dot((np.dot(output_grad, self.W.T)),
 		#	self.A + self.A.T)
-		grad_H = np.dot(output_grad, np.dot(self.W.T, self.A))
 		if output_grad.ndim == 3:
 			output_grad_reshaped = output_grad.squeeze().T
 		else:
 			output_grad_reshaped = output_grad
 
 		output_grad_reshaped = np.clip(output_grad_reshaped, -self.clip, self.clip)
+		grad_H = np.dot(output_grad, np.dot(self.W.T, self.A))
 		grad_H = np.clip(grad_H, -self.clip, self.clip)
 
 		self.W -= learning_rate * np.dot(output_grad_reshaped, self.H.T)
@@ -512,14 +512,21 @@ class Sigmoid(Activation):
 
 
 class ReLU(Activation):
-	def __init__(self):
-		def relu(x):
-			return np.maximum(0,x)
+    def __init__(self):
+        def relu(x):
+            if isinstance(x, tuple):  # For tuples
+                return tuple(np.maximum(0, elem) for elem in x)
+            else:  # A single array
+                return np.maximum(0, x)
 
-		def relu_prime(x):
-			return np.where(x > 0, 1, 0)
+        def relu_prime(x):
+            if isinstance(x, tuple):  # For tuples
+                return tuple(np.where(elem > 0, 1, 0) for elem in x)
+            else:  # For array
+                return np.where(x > 0, 1, 0)
 
-		super().__init__(relu, relu_prime)
+        super().__init__(relu, relu_prime)
+
 
 def binary_cross_entropy(y_true, y_pred):
 	return -np.mean(np.nan_to_num(y_true * np.log(y_pred) + (1 - y_true)*np.log(1 - y_pred)))
