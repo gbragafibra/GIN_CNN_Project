@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from rdkit import Chem
 import pandas as pd
 from preprocess_dataset import *
+import matplotlib.pyplot as plt
 
 # General layer class
 class Layer:
@@ -71,7 +72,6 @@ class Dense(Layer):
 		weights_grad = np.dot(output_grad, self.input.T)
 		input_grad = np.dot(self.weights.T, output_grad)
 		
-		
 		#Trying gradient clipping
 		weights_grad = np.clip(weights_grad, -self.clip, self.clip)
 		input_grad = np.clip(input_grad, -self.clip, self.clip)
@@ -80,7 +80,6 @@ class Dense(Layer):
 		# Now update weights and biases
 		self.weights -= learning_rate * weights_grad
 		self.bias -= learning_rate * output_grad
-
 		return input_grad
 
 
@@ -566,7 +565,7 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
     train_features, test_features, train_labels, test_labels = train_test_split(features, labels, test_size=0.3)
     test_features, eval_features, test_labels, eval_labels = train_test_split(test_features, test_labels, test_size=0.5)
 
-
+    train_losses = []
     for e in range(epochs):
         train_loss = 0
         train_correct = 0
@@ -595,10 +594,14 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
 
         train_loss /= len(train_features)
         train_accuracy = train_correct/len(train_features)
-
+        train_losses.append(train_loss)
         if verbose:
             print(f"Epoch {e + 1}/{epochs}, Training Loss = {train_loss}, Training accuracy = {train_accuracy}")
 
+
+    plt.plot(np.arange(1,epochs + 1,1), train_losses, "k")
+    plt.xlabel("Epoch")
+    plt.ylabel("Training Loss")
 
     test_loss = 0
     test_correct = 0
