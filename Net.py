@@ -210,7 +210,7 @@ class Convolution(Layer):
         self.input_length = input_length
         self.output_length = input_length - kernel_size + 1
         self.kernel_size = kernel_size
-        self.kernel = np.random.randn(kernel_size)/np.sqrt(input_length)
+        self.kernel = np.random.randn(kernel_size)#/np.sqrt(input_length) #If we want with std of 1/sqrt(n)
         self.biases = np.random.randn(self.output_length)
         self.clip = clip
 
