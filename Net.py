@@ -566,6 +566,7 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
     test_features, eval_features, test_labels, eval_labels = train_test_split(test_features, test_labels, test_size=0.5)
 
     train_losses = []
+    eval_losses = []
     for e in range(epochs):
         train_loss = 0
         train_correct = 0
@@ -591,17 +592,30 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
                 batch_grad = layer.backward(batch_grad, learning_rate)
         
             train_loss += batch_loss
-
+        eval_loss = 0
+        eval_correct = 0
+        for x, y in zip(eval_features, eval_labels):
+        	output = predict(network, x, training = False)
+        	eval_loss += loss(y, output)
+        	if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
+        		eval_correct += 1
         train_loss /= len(train_features)
         train_accuracy = train_correct/len(train_features)
-        train_losses.append(train_loss)
+        train_losses.append(train_loss)   
+        eval_loss /= len(eval_features)
+        eval_accuracy = eval_correct/len(eval_features)
+        eval_losses.append(eval_loss)
         if verbose:
-            print(f"Epoch {e + 1}/{epochs}, Training Loss = {train_loss}, Training accuracy = {train_accuracy}")
+        	print(f"Epoch {e + 1}/{epochs}, Training Loss = {train_loss}, Training accuracy = {train_accuracy}")
+        	print(f"Epoch {e + 1}/{epochs}, Evaluation Loss: {eval_loss}, Evaluation accuracy: {eval_accuracy}")
+	        
 
 
-    plt.plot(np.arange(1,epochs + 1,1), train_losses, "k")
+    plt.plot(np.arange(1,epochs + 1,1), train_losses, "k", label = "Training Loss")
+    plt.plot(np.arange(1,epochs + 1,1), eval_losses, "r", label = "Evaluation Loss")
     plt.xlabel("Epoch")
-    plt.ylabel("Training Loss")
+    plt.ylabel("Loss")
+    plt.legend()
 
     test_loss = 0
     test_correct = 0
@@ -614,13 +628,3 @@ def MBGD(network, loss, loss_prime, dataset, task, epochs = 10,
     test_accuracy = test_correct/len(test_features)
     print(f"Test Loss: {test_loss}, Test accuracy: {test_accuracy}")
 
-    eval_loss = 0
-    eval_correct = 0
-    for x, y in zip(eval_features, eval_labels):
-        output = predict(network, x, training = False)
-        eval_loss += loss(y, output)
-        if (output > 0.5 and y == 1) or (output < 0.5 and y == 0):
-        	eval_correct += 1   
-    eval_loss /= len(eval_features)
-    eval_accuracy = eval_correct/len(eval_features)
-    print(f"Evaluation Loss: {eval_loss}, Evaluation accuracy: {eval_accuracy}")
